@@ -108,8 +108,9 @@ kbd {
   border-radius: 4px;
 }
 
-.overlay.hidden {
-  display: none;
+.overlay.hidden,
+.hidden {
+  display: none !important;
 }
 
 .overlay-box {
@@ -120,7 +121,8 @@ kbd {
   align-items: center;
 }
 
-#overlay-title {
+#overlay-title,
+#pause-title {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: 4px;
@@ -149,4 +151,81 @@ kbd {
 
 #restart-btn:hover {
   background: #9bbdff;
+}
+
+/* ---- Menú de pausa ---- */
+.pause-box {
+  width: 280px;
+  gap: 16px;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1a1a28;
+  color: #e0e0e0;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.menu-item:hover,
+.menu-item.is-selected {
+  border-color: #7aa2f7;
+  background: #22223a;
+}
+
+.menu-level {
+  cursor: default;
+}
+
+.level-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: #7aa2f7;
+}
+
+.lvl-btn {
+  background: none;
+  border: none;
+  color: #7aa2f7;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.lvl-btn:hover {
+  color: #9bbdff;
+}
+
+.menu-hint {
+  font-size: 11px;
+  color: #555570;
+  text-align: center;
+}
+
+#pause-controls {
+  gap: 12px;
+  align-items: stretch;
+}
+
+#pause-controls ul {
+  padding: 4px 8px;
 }
