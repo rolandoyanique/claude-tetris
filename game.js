@@ -40,6 +40,17 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
+// ---- Pause menu (unit 1) ----
+const pauseMenu = document.getElementById('pause-menu');
+const pauseResumeBtn = document.getElementById('pause-resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const pauseControlsBtn = document.getElementById('pause-controls-btn');
+const pauseControlsList = document.getElementById('pause-controls-list');
+const pauseLevelSelect = document.getElementById('pause-level-select');
+let startLevel = 1;          // level chosen in "Nivel inicial", used by the next game
+const heldCodes = new Set(); // keys currently down (for resume lock)
+const resumeBlockedCodes = new Set(); // keys held when resuming; ignored until released
+
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
@@ -93,6 +104,11 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+// Drop interval (ms) for a level. Shared by init() and clearLines().
+function intervalForLevel(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -106,8 +122,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = startLevel + Math.floor(lines / 10);
+    dropInterval = intervalForLevel(level);
     updateHUD();
   }
 }
@@ -229,14 +245,21 @@ function endGame() {
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
-  if (!paused) {
+  if (paused) {
+    // Pause menu (unit 1): show menu, controls list collapsed, select synced with startLevel.
+    cancelAnimationFrame(animId);
+    pauseControlsList.classList.add('hidden');
+    pauseControlsBtn.setAttribute('aria-expanded', 'false');
+    pauseLevelSelect.value = String(startLevel);
+    pauseMenu.classList.remove('hidden');
+    pauseResumeBtn.focus();
+  } else {
+    // Resume (unit 1): no drop burst, and keys still held are ignored until released.
+    pauseMenu.classList.add('hidden');
+    heldCodes.forEach(code => resumeBlockedCodes.add(code));
+    dropAccum = 0;
     lastTime = performance.now();
     loop(lastTime);
-  } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
   }
 }
 
@@ -260,23 +283,56 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = intervalForLevel(level);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden'); // pause-menu (unit 1)
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+// ---- Pause menu (unit 1): setup and handlers ----
+for (let i = 1; i <= 15; i++) pauseLevelSelect.add(new Option(`Nivel ${i}`, String(i)));
+pauseResumeBtn.addEventListener('click', togglePause);
+pauseRestartBtn.addEventListener('click', () => {
+  startLevel = Number(pauseLevelSelect.value);
+  init();
+});
+pauseControlsBtn.addEventListener('click', () => {
+  const open = pauseControlsList.classList.contains('hidden');
+  pauseControlsList.classList.toggle('hidden', !open);
+  pauseControlsBtn.setAttribute('aria-expanded', String(open));
+});
+
+// While paused, only P/Escape (handled by the keydown listener) act. Block
+// page scroll and select-less game keys so they don't leak into the page.
+function handlePausedKey(e) {
+  const gameKeys = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+  if (gameKeys.includes(e.code) && e.target.tagName !== 'SELECT') e.preventDefault();
+}
+
+document.addEventListener('keyup', e => {
+  heldCodes.delete(e.code);
+  resumeBlockedCodes.delete(e.code);
+});
+window.addEventListener('blur', () => heldCodes.clear());
+
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  heldCodes.add(e.code);
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (!e.repeat) resumeBlockedCodes.delete(e.code); // fresh press always works
+  if (paused) { handlePausedKey(e); return; }
+  if (gameOver || resumeBlockedCodes.has(e.code)) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;

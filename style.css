@@ -150,3 +150,86 @@ kbd {
 #restart-btn:hover {
   background: #9bbdff;
 }
+
+/* ---- Pause menu (unit 1) ---- */
+#pause-menu .pause-box {
+  width: 220px;
+}
+
+#pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #7aa2f7;
+}
+
+.pause-btn {
+  width: 100%;
+  background: #7aa2f7;
+  color: #0f0f17;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+.pause-btn:hover,
+.pause-btn:focus-visible {
+  background: #9bbdff;
+  outline: 2px solid #e0e0e0;
+  outline-offset: 2px;
+}
+
+.pause-btn-secondary {
+  background: #22223a;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+}
+
+.pause-btn-secondary:hover,
+.pause-btn-secondary:focus-visible {
+  background: #2e2e4a;
+}
+
+#pause-controls-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+#pause-controls-list.hidden {
+  display: none;
+}
+
+#pause-controls-list li {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pause-level {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#pause-level-select {
+  background: #22223a;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
