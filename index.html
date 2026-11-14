@@ -47,7 +47,44 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <!-- Records (unit 2): nombre para el top 5 al terminar la partida -->
+        <div id="records-entry" class="records-block hidden">
+          <p class="records-entry-label">¡Entra en el top 5! Escribe tu nombre</p>
+          <div class="records-entry-row">
+            <input id="records-name" type="text" maxlength="12" placeholder="AAA" autocomplete="off" spellcheck="false" />
+            <button id="records-save-btn" type="button">Guardar</button>
+          </div>
+        </div>
+        <!-- Records (unit 2): tabla top 5 + estadísticas + borrar -->
+        <div id="records-summary" class="records-block hidden">
+          <table class="records-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th></tr></thead>
+            <tbody id="records-body"></tbody>
+          </table>
+          <div class="records-stats">
+            <span>Mejor combo<b id="records-best-combo">0</b></span>
+            <span>Máx. líneas<b id="records-max-lines">0</b></span>
+          </div>
+          <button id="records-reset-btn" type="button" class="records-reset-btn">Borrar récords</button>
+        </div>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <!-- Records (unit 2): pantalla de inicio, el juego no arranca hasta pulsar Empezar -->
+    <div id="start-overlay" class="overlay">
+      <div class="overlay-box">
+        <p id="start-title">TETRIS</p>
+        <table class="records-table">
+          <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th></tr></thead>
+          <tbody id="start-records-body"></tbody>
+        </table>
+        <div class="records-stats">
+          <span>Mejor combo<b id="start-best-combo">0</b></span>
+          <span>Máx. líneas<b id="start-max-lines">0</b></span>
+        </div>
+        <button id="start-btn" type="button">Empezar</button>
+        <button id="start-reset-btn" type="button" class="records-reset-btn">Borrar récords</button>
       </div>
     </div>
   </div>
