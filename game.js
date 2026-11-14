@@ -4,8 +4,11 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
+// ---- Skins (visual themes) ----
+// Each skin: palette = 7 piece colors (index colorIndex-1), bg/grid = canvas colors,
+// draw(context, x, y, colorIndex, size, alpha) = renders one block.
+const SKIN_STORAGE_KEY = 'tetris.skin';
+const RETRO_PALETTE = [
   '#4dd0e1', // I - cyan
   '#ffd54f', // O - yellow
   '#ba68c8', // T - purple
@@ -14,6 +17,125 @@ const COLORS = [
   '#7986cb', // J - indigo
   '#ffb74d', // L - orange
 ];
+const NEON_PALETTE = ['#00f0ff', '#ffe600', '#d500f9', '#00ff66', '#ff1744', '#2979ff', '#ff9100'];
+const PASTEL_PALETTE = ['#a8e6ef', '#fff1a8', '#d9c2ef', '#bfeccb', '#f7c0c0', '#bcd0f5', '#ffd9a8'];
+const PIXEL_PALETTE = RETRO_PALETTE;
+
+// Darkens a #rrggbb color by factor f (0..1) and returns an rgb() string.
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * f);
+  const g = Math.round(((n >> 8) & 255) * f);
+  const b = Math.round((n & 255) * f);
+  return `rgb(${r},${g},${b})`;
+}
+
+// Rounded-rect path: native roundRect when available, manual arcs otherwise.
+function roundRectPath(c, x, y, w, h, r) {
+  c.beginPath();
+  if (c.roundRect) {
+    c.roundRect(x, y, w, h, r);
+    return;
+  }
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    palette: RETRO_PALETTE,
+    bg: '#1a1a25',
+    grid: '#22222e',
+    draw(c, x, y, colorIndex, size, alpha) {
+      c.globalAlpha = alpha ?? 1;
+      c.fillStyle = RETRO_PALETTE[colorIndex - 1];
+      c.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      c.fillStyle = 'rgba(255,255,255,0.12)';
+      c.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      c.globalAlpha = 1;
+    },
+  },
+  neon: {
+    label: 'Neón',
+    palette: NEON_PALETTE,
+    bg: '#000000',
+    grid: '#15152a',
+    draw(c, x, y, colorIndex, size, alpha) {
+      const color = NEON_PALETTE[colorIndex - 1];
+      c.globalAlpha = alpha ?? 1;
+      c.shadowColor = color;
+      c.shadowBlur = size * 0.5;
+      c.fillStyle = color;
+      c.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+      // reset glow so it does not leak into other drawing
+      c.shadowBlur = 0;
+      c.shadowColor = 'rgba(0,0,0,0)';
+      c.fillStyle = 'rgba(255,255,255,0.45)';
+      c.fillRect(x * size + 4, y * size + 4, size - 8, 2);
+      c.globalAlpha = 1;
+    },
+  },
+  pastel: {
+    label: 'Pastel',
+    palette: PASTEL_PALETTE,
+    bg: '#f4f1fa',
+    grid: '#e2dcec',
+    draw(c, x, y, colorIndex, size, alpha) {
+      const color = PASTEL_PALETTE[colorIndex - 1];
+      c.globalAlpha = alpha ?? 1;
+      roundRectPath(c, x * size + 1, y * size + 1, size - 2, size - 2, size * 0.2);
+      c.fillStyle = color;
+      c.fill();
+      c.strokeStyle = shade(color, 0.85);
+      c.lineWidth = 1;
+      c.stroke();
+      c.globalAlpha = 1;
+    },
+  },
+  pixel: {
+    label: 'Pixel art',
+    palette: PIXEL_PALETTE,
+    bg: '#14202b',
+    grid: '#1d2c3a',
+    draw(c, x, y, colorIndex, size, alpha) {
+      const color = PIXEL_PALETTE[colorIndex - 1];
+      const px = x * size;
+      const py = y * size;
+      const inner = size - 4;
+      const step = Math.max(2, Math.floor(inner / 4));
+      c.globalAlpha = alpha ?? 1;
+      // dark 1px border
+      c.fillStyle = shade(color, 0.6);
+      c.fillRect(px + 1, py + 1, size - 2, size - 2);
+      // base fill
+      c.fillStyle = color;
+      c.fillRect(px + 2, py + 2, inner, inner);
+      // checkerboard texture
+      c.fillStyle = shade(color, 0.85);
+      for (let i = 0; i * step < inner; i++)
+        for (let j = 0; j * step < inner; j++)
+          if ((i + j) % 2 === 0)
+            c.fillRect(
+              px + 2 + i * step,
+              py + 2 + j * step,
+              Math.min(step, inner - i * step),
+              Math.min(step, inner - j * step)
+            );
+      // pixel highlight on top edge
+      c.fillStyle = 'rgba(255,255,255,0.3)';
+      c.fillRect(px + 2, py + 2, inner, 2);
+      c.globalAlpha = 1;
+    },
+  },
+};
+
+let activeSkin = SKINS.retro;
 
 const PIECES = [
   null,
@@ -158,18 +280,11 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  activeSkin.draw(context, x, y, colorIndex, size, alpha);
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = activeSkin.grid;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -300,5 +415,47 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+// ---- Skins: selector, persistence, redraw (unit 3) ----
+const skinSelect = document.getElementById('skin-select');
+
+function loadSkinKey() {
+  try {
+    const stored = localStorage.getItem(SKIN_STORAGE_KEY);
+    if (stored && Object.prototype.hasOwnProperty.call(SKINS, stored)) return stored;
+  } catch (e) { /* storage unavailable: use default */ }
+  return 'retro';
+}
+
+function saveSkinKey(key) {
+  try {
+    localStorage.setItem(SKIN_STORAGE_KEY, key);
+  } catch (e) { /* storage unavailable: ignore */ }
+}
+
+function setSkin(key) {
+  if (!Object.prototype.hasOwnProperty.call(SKINS, key)) return;
+  activeSkin = SKINS[key];
+  document.body.style.setProperty('--skin-bg', activeSkin.bg);
+  skinSelect.value = key;
+  saveSkinKey(key);
+  // Redraw once so the change shows while paused or on game over (loop is not restarted).
+  if (current && next) {
+    draw();
+    drawNext();
+  }
+}
+
+skinSelect.addEventListener('change', e => {
+  setSkin(e.target.value);
+  e.target.blur();
+});
+
+// Keep game keys from reaching the board while the select has focus (P still toggles pause).
+skinSelect.addEventListener('keydown', e => {
+  if (e.code !== 'KeyP') e.stopPropagation();
+});
+
+setSkin(loadSkinKey());
 
 init();

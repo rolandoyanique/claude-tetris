@@ -28,7 +28,7 @@ body {
 #board {
   display: block;
   border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  background: var(--skin-bg, #1a1a25);
   border-radius: 4px;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
 }
@@ -66,8 +66,20 @@ body {
 #next-canvas {
   display: block;
   border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  background: var(--skin-bg, #1a1a25);
   border-radius: 4px;
+}
+
+/* ---- Skins (unit 3) ---- */
+.skin-section select {
+  background: #22223a;
+  border: 1px solid #3a3a5a;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #ccc;
+  cursor: pointer;
 }
 
 /* ---- Controles ---- */
