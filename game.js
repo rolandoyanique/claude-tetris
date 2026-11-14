@@ -4,17 +4,6 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#7986cb', // J - indigo
-  '#ffb74d', // L - orange
-];
-
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -28,6 +17,149 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+// ---------------------------------------------------------------------------
+// Skins (temas visuales)
+// Cada skin define: paleta por tipo de pieza (índice 1-7), color de rejilla,
+// variables CSS de la interfaz y una función de dibujo de bloque propia.
+// Para añadir una skin basta con añadir una entrada aquí.
+// ---------------------------------------------------------------------------
+
+// Retro: bloques cuadrados y colores planos (estilo original).
+function drawRetroBlock(ctx, x, y, color, size, alpha) {
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(px, py, s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(px, py, s, 4);
+  ctx.globalAlpha = 1;
+}
+
+// Neon: relleno tenue + contorno brillante con shadowBlur (glow).
+function drawNeonBlock(ctx, x, y, color, size, alpha) {
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = alpha * 0.15;
+  ctx.fillRect(px, py, s, s);
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 14;
+  ctx.strokeRect(px + 1, py + 1, s - 2, s - 2);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+// Pastel: esquinas redondeadas (simuladas con arcTo), sombra suave y borde interior claro.
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawPastelBlock(ctx, x, y, color, size, alpha) {
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  ctx.globalAlpha = alpha;
+  // sombra inferior
+  ctx.fillStyle = 'rgba(90,70,100,0.15)';
+  roundRectPath(ctx, px, py + 2, s, s, 7);
+  ctx.fill();
+  // cuerpo
+  ctx.fillStyle = color;
+  roundRectPath(ctx, px, py, s, s, 7);
+  ctx.fill();
+  // borde interior claro
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 2;
+  roundRectPath(ctx, px + 2, py + 2, s - 4, s - 4, 5);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Pixel art: textura de tablero de ajedrez de 4 px + biseles claro/oscuro.
+function drawPixelBlock(ctx, x, y, color, size, alpha) {
+  const px = x * size + 1, py = y * size + 1, s = size - 2, cell = 4;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(px, py, s, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  for (let j = 0; j < s; j += cell)
+    for (let i = 0; i < s; i += cell)
+      if (((i + j) / cell) % 2 === 0) ctx.fillRect(px + i, py + j, cell, cell);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(px, py, s, 2);
+  ctx.fillRect(px, py, 2, s);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(px, py + s - 2, s, 2);
+  ctx.fillRect(px + s - 2, py, 2, s);
+  ctx.globalAlpha = 1;
+}
+
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    colors: [null, '#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#7986cb', '#ffb74d'],
+    grid: '#22222e',
+    drawBlock: drawRetroBlock,
+    theme: {
+      '--page-bg': '#0f0f17', '--board-bg': '#1a1a25', '--board-border': '#2a2a3a',
+      '--text': '#e0e0e0', '--muted': '#555570', '--accent': '#7aa2f7', '--accent-hover': '#9bbdff',
+      '--danger': '#e57373', '--kbd-bg': '#22223a', '--kbd-border': '#3a3a5a', '--kbd-text': '#aaaaaa',
+      '--controls': '#888888', '--overlay': 'rgba(10,10,20,0.75)', '--button-text': '#0f0f17',
+    },
+  },
+  neon: {
+    label: 'Neon',
+    colors: [null, '#00f0ff', '#fff200', '#ff00ff', '#39ff14', '#ff073a', '#3d5afe', '#ff8c00'],
+    grid: '#14141f',
+    drawBlock: drawNeonBlock,
+    theme: {
+      '--page-bg': '#000000', '--board-bg': '#000000', '--board-border': '#00f0ff',
+      '--text': '#d8faff', '--muted': '#2a6a75', '--accent': '#00f0ff', '--accent-hover': '#7ffbff',
+      '--danger': '#ff073a', '--kbd-bg': '#000000', '--kbd-border': '#ff00ff', '--kbd-text': '#ff88ff',
+      '--controls': '#4a9aa5', '--overlay': 'rgba(0,0,0,0.85)', '--button-text': '#000000',
+    },
+  },
+  pastel: {
+    label: 'Pastel',
+    colors: [null, '#a8e6cf', '#ffd3b6', '#c3b1e1', '#b5ead7', '#ffaaa5', '#a0c4ff', '#ffdfa3'],
+    grid: '#f3e6dd',
+    drawBlock: drawPastelBlock,
+    theme: {
+      '--page-bg': '#fdf4ef', '--board-bg': '#fffaf6', '--board-border': '#f0d9cc',
+      '--text': '#5a4a5e', '--muted': '#a898ab', '--accent': '#9d8ec9', '--accent-hover': '#b3a6dc',
+      '--danger': '#ef8a9a', '--kbd-bg': '#ffffff', '--kbd-border': '#e8d5e0', '--kbd-text': '#7a6a7e',
+      '--controls': '#8a7a8e', '--overlay': 'rgba(253,244,239,0.85)', '--button-text': '#ffffff',
+    },
+  },
+  pixel: {
+    label: 'Pixel art',
+    colors: [null, '#2ec4b6', '#ffbf69', '#9b5de5', '#70e000', '#f15bb5', '#4361ee', '#ff7f11'],
+    grid: '#2c3050',
+    drawBlock: drawPixelBlock,
+    theme: {
+      '--page-bg': '#1b1d2b', '--board-bg': '#22263a', '--board-border': '#4a4f73',
+      '--text': '#e8e8f0', '--muted': '#6b7196', '--accent': '#ffd166', '--accent-hover': '#ffe39a',
+      '--danger': '#ef476f', '--kbd-bg': '#2c3050', '--kbd-border': '#4a4f73', '--kbd-text': '#cccccc',
+      '--controls': '#8a90b8', '--overlay': 'rgba(20,22,35,0.8)', '--button-text': '#1b1d2b',
+    },
+  },
+};
+
+const SKIN_STORAGE_KEY = 'tetris-skin';
+const DEFAULT_SKIN = 'retro';
+
+let currentSkinKey = DEFAULT_SKIN;
+let COLORS = SKINS[DEFAULT_SKIN].colors;
+let skinDrawBlock = SKINS[DEFAULT_SKIN].drawBlock;
+let skinGrid = SKINS[DEFAULT_SKIN].grid;
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -39,6 +171,7 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const skinSelect = document.getElementById('skin-select');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -158,18 +291,38 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  skinDrawBlock(context, x, y, COLORS[colorIndex], size, alpha ?? 1);
+}
+
+function applySkin(key) {
+  const skin = SKINS[key] ? key : DEFAULT_SKIN;
+  currentSkinKey = skin;
+  COLORS = SKINS[skin].colors;
+  skinDrawBlock = SKINS[skin].drawBlock;
+  skinGrid = SKINS[skin].grid;
+
+  const root = document.documentElement.style;
+  for (const [prop, value] of Object.entries(SKINS[skin].theme)) root.setProperty(prop, value);
+  document.body.dataset.skin = skin;
+  skinSelect.value = skin;
+}
+
+function setSkin(key) {
+  applySkin(key);
+  try { localStorage.setItem(SKIN_STORAGE_KEY, currentSkinKey); } catch (_) { /* almacenamiento no disponible */ }
+  // Redibujar al instante (si el bucle está pausado o en game over no se redibuja solo).
+  if (current && next) {
+    draw();
+    drawNext();
+  }
+}
+
+function loadSkinPreference() {
+  try { return localStorage.getItem(SKIN_STORAGE_KEY); } catch (_) { return null; }
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = skinGrid;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -301,4 +454,11 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+skinSelect.addEventListener('change', e => {
+  setSkin(e.target.value);
+  // Quitar el foco del <select> para que las flechas y Espacio sigan controlando la pieza.
+  e.target.blur();
+});
+
+applySkin(loadSkinPreference() || DEFAULT_SKIN);
 init();
